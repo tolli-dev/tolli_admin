@@ -16,7 +16,13 @@ export default async function FunnelPage({ params }: { params: Promise<{ funnelI
   if (!funnel) notFound();
 
   const result = await fetchFunnelResults(funnel);
-  const steps = result.results.map((step) => ({ name: step.name, count: step.count }));
+  // PostHog's funnel response ignores our custom `name` and returns the raw
+  // event name instead, so the display label always comes from our own
+  // funnel definition (by step order), never from the API response.
+  const steps = result.results.map((step, index) => ({
+    name: funnel.steps[index]?.label ?? step.name,
+    count: step.count,
+  }));
   const overallConversion =
     steps.length > 1 && steps[0].count > 0 ? (steps.at(-1)!.count / steps[0].count) * 100 : 0;
 
@@ -31,7 +37,7 @@ export default async function FunnelPage({ params }: { params: Promise<{ funnelI
       </div>
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
-        <p className="text-sm text-neutral-400">전체 전환율 (첫 단계 → 마지막 단계)</p>
+        <p className="text-sm text-neutral-400">전체 전환율 (맨 처음 단계 → 마지막 단계)</p>
         <p className="mt-1 text-3xl font-semibold text-neutral-50">{overallConversion.toFixed(1)}%</p>
       </div>
 

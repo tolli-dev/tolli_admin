@@ -1,6 +1,6 @@
 import { fetchRecentEvents } from "@/lib/posthog/queries";
 import { EventTable, type EventRow } from "@/components/events/EventTable";
-import { FUNNELS } from "@/lib/funnels/definitions";
+import { FUNNELS, getEventLabel } from "@/lib/funnels/definitions";
 import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const revalidate = 60;
@@ -41,7 +41,9 @@ export default async function EventsPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-50">이벤트 탐색기</h1>
-          <p className="mt-1 text-sm text-neutral-500">최근 7일 원시 이벤트 (최대 100건)</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            최근 7일 동안 실제로 발생한 활동 기록 (최대 100건, 개발자용 상세 정보 포함)
+          </p>
         </div>
         <RefreshButton />
       </div>
@@ -52,11 +54,11 @@ export default async function EventsPage({
           defaultValue={event ?? ""}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
         >
-          <option value="">전체 이벤트</option>
-          <option value="$pageview">$pageview</option>
+          <option value="">전체 활동</option>
+          <option value="$pageview">화면 조회</option>
           {KNOWN_EVENTS.map((name) => (
             <option key={name} value={name}>
-              {name}
+              {getEventLabel(name)}
             </option>
           ))}
         </select>
