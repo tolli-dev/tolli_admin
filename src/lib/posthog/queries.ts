@@ -103,3 +103,73 @@ export async function fetchRecentEvents(options: { eventName?: string; limit?: n
 
   return runPostHogQuery<HogQLQueryResponse>(query, 60);
 }
+
+export type PropertyBreakdownRow = { label: string; count: number };
+
+const SAFE_IDENTIFIER = /^[a-zA-Z0-9_$]+$/;
+
+/**
+ * Groups an event's count by one of its properties (e.g. login provider,
+ * device type, abandonment step). `propertyKey` must be a hardcoded constant
+ * from our own call sites, never a value derived from user/request input —
+ * it's interpolated directly into the HogQL string, not bound as a param.
+ */
+export async function fetchPropertyBreakdown(
+  event: string,
+  propertyKey: string,
+  options: { days?: number; limit?: number } = {},
+): Promise<{ results: PropertyBreakdownRow[] }> {
+  if (!SAFE_IDENTIFIER.test(propertyKey)) {
+    throw new Error(`Unsafe property key: ${propertyKey}`);
+  }
+  const { days = 30, limit = 20 } = options;
+
+  const query = {
+    kind: "HogQLQuery",
+    query: `SELECT toString(properties.${propertyKey}) AS value, count() AS total FROM events WHERE event = {event} AND timestamp >= now() - INTERVAL ${days} DAY GROUP BY value ORDER BY total DESC LIMIT {limit}`,
+    values: { event, limit },
+  };
+
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  return {
+    results: response.results.map((row) => ({
+      label: String(row[0] ?? "알 수 없음"),
+      count: Number(row[1]),
+    })),
+  };
+}
+
+const EXCLUDED_AUTOCAPTURE_EVENTS = ["$pageview", "$pageleave", "$autocapture", "$web_vitals", "$rageclick"];
+
+export async function fetchTopEvents(options: { days?: number; limit?: number } = {}) {
+  const { days = 30, limit = 10 } = options;
+  const query = {
+    kind: "HogQLQuery",
+    query: `SELECT event, count() AS total FROM events WHERE timestamp >= now() - INTERVAL ${days} DAY AND event NOT IN {excluded} GROUP BY event ORDER BY total DESC LIMIT {limit}`,
+    values: { excluded: EXCLUDED_AUTOCAPTURE_EVENTS, limit },
+  };
+
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  return {
+    results: response.results.map((row) => ({ label: String(row[0]), count: Number(row[1]) })),
+  };
+}
+
+export async function fetchRageClickCount(days = 30) {
+  const query = {
+    kind: "HogQLQuery",
+    query: `SELECT count() FROM events WHERE event = '$rageclick' AND timestamp >= now() - INTERVAL ${days} DAY`,
+  };
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  return Number(response.results[0]?.[0] ?? 0);
+}
+
+export async function fetchAverageRecordingDuration(days = 30) {
+  const query = {
+    kind: "HogQLQuery",
+    query: `SELECT avg(toFloat(properties.duration_sec)), count() FROM events WHERE event = 'recording_completed' AND timestamp >= now() - INTERVAL ${days} DAY`,
+  };
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  const [avg, count] = response.results[0] ?? [0, 0];
+  return { averageSeconds: Number(avg ?? 0), count: Number(count ?? 0) };
+}

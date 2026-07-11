@@ -1,16 +1,39 @@
-import { fetchEventTrend } from "@/lib/posthog/queries";
+import {
+  fetchAverageRecordingDuration,
+  fetchEventTrend,
+  fetchPropertyBreakdown,
+  fetchRageClickCount,
+  fetchTopEvents,
+} from "@/lib/posthog/queries";
+import { getEventLabel } from "@/lib/funnels/definitions";
 import { KpiTile } from "@/components/charts/KpiTile";
 import { TrendLine } from "@/components/charts/TrendLine";
+import { BreakdownBar } from "@/components/charts/BreakdownBar";
 import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const revalidate = 300;
 
 export default async function OverviewPage() {
-  const [dauTrend, signupsToday, signups7d, signups30dTrend] = await Promise.all([
+  const [
+    dauTrend,
+    signupsToday,
+    signups7d,
+    signups30dTrend,
+    loginProvider,
+    deviceType,
+    topEvents,
+    rageClicks,
+    recordingDuration,
+  ] = await Promise.all([
     fetchEventTrend("$pageview", { dateFrom: "-30d", math: "dau" }),
     fetchEventTrend("signup_complete", { dateFrom: "-1d" }),
     fetchEventTrend("signup_complete", { dateFrom: "-7d" }),
     fetchEventTrend("signup_complete", { dateFrom: "-30d" }),
+    fetchPropertyBreakdown("login_clicked", "provider", { days: 30 }),
+    fetchPropertyBreakdown("$pageview", "$device_type", { days: 30 }),
+    fetchTopEvents({ days: 30, limit: 8 }),
+    fetchRageClickCount(30),
+    fetchAverageRecordingDuration(30),
   ]);
 
   const dau = dauTrend.results[0];
@@ -37,17 +60,28 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TrendLine
-          title="일별 방문자 수 (최근 30일)"
-          days={dau?.days ?? []}
-          values={dau?.data ?? []}
-        />
+        <TrendLine title="일별 방문자 수 (최근 30일)" days={dau?.days ?? []} values={dau?.data ?? []} />
         <TrendLine
           title="일별 신규 가입 수 (최근 30일)"
           days={signups30dTrend.results[0]?.days ?? []}
           values={signups30dTrend.results[0]?.data ?? []}
         />
       </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <KpiTile label="낭독 녹음 평균 길이(초)" value={Math.round(recordingDuration.averageSeconds)} />
+        <KpiTile label="사용성 이슈 신호 (연속 클릭 감지)" value={rageClicks} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <BreakdownBar title="로그인 방법 (최근 30일)" rows={loginProvider.results} />
+        <BreakdownBar title="접속 기기 (최근 30일)" rows={deviceType.results} />
+      </div>
+
+      <BreakdownBar
+        title="가장 많이 발생한 활동 (최근 30일)"
+        rows={topEvents.results.map((row) => ({ label: getEventLabel(row.label), count: row.count }))}
+      />
     </div>
   );
 }
