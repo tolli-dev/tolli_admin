@@ -21,15 +21,15 @@ async function encryptSession(expiresAt: Date) {
     .sign(getSecretKey());
 }
 
-async function decryptSession(token: string | undefined) {
-  if (!token) return null;
+export async function verifySessionToken(token: string | undefined) {
+  if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, getSecretKey(), {
       algorithms: ["HS256"],
     });
     return payload.authenticated === true;
   } catch {
-    return null;
+    return false;
   }
 }
 
@@ -54,7 +54,7 @@ export async function deleteSession() {
 export async function isAuthenticated() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
-  return (await decryptSession(token)) === true;
+  return verifySessionToken(token);
 }
 
 export { SESSION_COOKIE };
