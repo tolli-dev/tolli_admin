@@ -6,7 +6,20 @@ const CATEGORICAL = ["#3987e5", "#199e70", "#c98500", "#008300", "#9085e9", "#e6
 
 export type BreakdownRow = { label: string; count: number };
 
-export function BreakdownBar({ title, rows }: { title: string; rows: BreakdownRow[] }) {
+/**
+ * `percentOf`, when passed, shows each bar's share of that total (e.g. study
+ * dropoffs as a % of everyone who started) instead of a raw count — counts
+ * alone don't say whether a dropoff point is actually significant.
+ */
+export function BreakdownBar({
+  title,
+  rows,
+  percentOf,
+}: {
+  title: string;
+  rows: BreakdownRow[];
+  percentOf?: number;
+}) {
   const ordered = [...rows].reverse(); // ECharts renders category axis bottom-up
 
   const option = {
@@ -16,6 +29,12 @@ export function BreakdownBar({ title, rows }: { title: string; rows: BreakdownRo
       backgroundColor: "#1a1a19",
       borderColor: "#2c2c2a",
       textStyle: { color: "#ffffff" },
+      formatter: (params: { name: string; value: number }) => {
+        const count = `${params.value.toLocaleString("ko-KR")}건`;
+        if (!percentOf) return `${params.name}<br/>${count}`;
+        const pct = ((params.value / percentOf) * 100).toFixed(1);
+        return `${params.name}<br/>${pct}% (${count})`;
+      },
     },
     xAxis: { show: false, type: "value" },
     yAxis: {
@@ -34,7 +53,8 @@ export function BreakdownBar({ title, rows }: { title: string; rows: BreakdownRo
           position: "right",
           color: "#ffffff",
           fontSize: 12,
-          formatter: (params: { value: number }) => params.value.toLocaleString("ko-KR"),
+          formatter: (params: { value: number }) =>
+            percentOf ? `${((params.value / percentOf) * 100).toFixed(1)}%` : params.value.toLocaleString("ko-KR"),
         },
         itemStyle: {
           borderRadius: [0, 4, 4, 0],
