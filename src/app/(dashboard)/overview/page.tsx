@@ -29,8 +29,8 @@ export default async function OverviewPage() {
     fetchEventTrend("signup_complete", { dateFrom: "-1d" }),
     fetchEventTrend("signup_complete", { dateFrom: "-7d" }),
     fetchEventTrend("signup_complete", { dateFrom: "-30d" }),
-    fetchPropertyBreakdown("login_clicked", "provider", { days: 30 }),
-    fetchPropertyBreakdown("$pageview", "$device_type", { days: 30 }),
+    fetchPropertyBreakdown("login_clicked", "provider", { days: 30, uniqueUsers: true }),
+    fetchPropertyBreakdown("$pageview", "$device_type", { days: 30, uniqueUsers: true }),
     fetchTopEvents({ days: 30, limit: 8 }),
     fetchRageClickCount(30),
     fetchAverageRecordingDuration(30),
@@ -74,8 +74,18 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BreakdownBar title="로그인 방법 (최근 30일)" rows={loginProvider.results} />
-        <BreakdownBar title="접속 기기 (최근 30일)" rows={deviceType.results} />
+        <BreakdownBar
+          title="로그인 방법 (최근 30일)"
+          rows={loginProvider.results}
+          caption="이 방법으로 로그인한 사람 수예요 (중복 제외). 최근 가입한 사람뿐 아니라 예전에 가입한 사람이 이 기간에 다시 로그인한 것도 포함이라, 위쪽 '최근 30일 신규 가입' 숫자보다 훨씬 클 수 있어요."
+          sortRows="count-desc"
+        />
+        <BreakdownBar
+          title="접속 기기 (최근 30일)"
+          rows={deviceType.results}
+          caption="이 기기로 접속한 사람 수예요 (중복 제외). 같은 사람이 여러 번 방문해도 한 번만 세요."
+          sortRows="count-desc"
+        />
       </div>
 
       <BreakdownBar

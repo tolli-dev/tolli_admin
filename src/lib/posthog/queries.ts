@@ -113,20 +113,27 @@ const SAFE_IDENTIFIER = /^[a-zA-Z0-9_$]+$/;
  * device type, abandonment step). `propertyKey` must be a hardcoded constant
  * from our own call sites, never a value derived from user/request input —
  * it's interpolated directly into the HogQL string, not bound as a param.
+ *
+ * `uniqueUsers: true` counts distinct people (distinct_id) instead of raw
+ * event occurrences — e.g. "몇 명이 카카오로 로그인했는지" instead of "로그인이
+ * 몇 번 발생했는지". Without this, high-frequency events like $pageview or
+ * repeat logins by the same returning user inflate the count far past
+ * something like the signup total, which is naturally confusing to compare.
  */
 export async function fetchPropertyBreakdown(
   event: string,
   propertyKey: string,
-  options: { days?: number; limit?: number } = {},
+  options: { days?: number; limit?: number; uniqueUsers?: boolean } = {},
 ): Promise<{ results: PropertyBreakdownRow[] }> {
   if (!SAFE_IDENTIFIER.test(propertyKey)) {
     throw new Error(`Unsafe property key: ${propertyKey}`);
   }
-  const { days = 30, limit = 20 } = options;
+  const { days = 30, limit = 20, uniqueUsers = false } = options;
+  const countExpr = uniqueUsers ? "count(DISTINCT distinct_id)" : "count()";
 
   const query = {
     kind: "HogQLQuery",
-    query: `SELECT toString(properties.${propertyKey}) AS value, count() AS total FROM events WHERE event = {event} AND timestamp >= now() - INTERVAL ${days} DAY GROUP BY value ORDER BY total DESC LIMIT {limit}`,
+    query: `SELECT toString(properties.${propertyKey}) AS value, ${countExpr} AS total FROM events WHERE event = {event} AND timestamp >= now() - INTERVAL ${days} DAY GROUP BY value ORDER BY total DESC LIMIT {limit}`,
     values: { event, limit },
   };
 

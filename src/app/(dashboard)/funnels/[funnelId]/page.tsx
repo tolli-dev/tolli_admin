@@ -69,12 +69,17 @@ export default async function FunnelPage({ params }: { params: Promise<{ funnelI
         <div>
           <p className="mb-3 text-sm text-neutral-500">
             화면 이동 기록만으로는 학습 중 어디서 중간에 그만두는지 잡히지 않아서, 앱이 직접 남기는 &quot;이탈&quot;
-            기록으로 대신 보여줘요. 비율은 학습을 시작한 전체 인원 대비예요.
+            기록으로 대신 보여줘요.
           </p>
           <BreakdownBar
-            title="스텝별 이탈율 (최근 30일)"
-            rows={abandonment.results.map((row) => ({ label: studyStepLabel(row.label), count: row.count }))}
+            title="스텝별 이탈율 (최근 30일, 단계 순)"
+            rows={abandonment.results
+              .slice()
+              .sort((a, b) => Number(a.label) - Number(b.label))
+              .map((row) => ({ label: studyStepLabel(row.label), count: row.count }))}
             percentOf={steps[0]?.count}
+            sortRows="as-is"
+            caption={`이탈율 = 이 지점에서 이탈한 인원 ÷ 학습을 시작한 전체 인원(${(steps[0]?.count ?? 0).toLocaleString("ko-KR")}명, study_started 기준) × 100. 위에서부터 학습 초반(0단계) → 후반(7단계) 순서예요.`}
           />
         </div>
       )}
