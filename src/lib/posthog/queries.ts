@@ -49,11 +49,11 @@ function toEventsNode(step: FunnelDefinition["steps"][number]): EventsNode {
   };
 }
 
-export async function fetchFunnelResults(funnel: FunnelDefinition, dateFrom = "-30d") {
+export async function fetchFunnelResults(funnel: FunnelDefinition, range: { from: string; to: string }) {
   const query = {
     kind: "FunnelsQuery",
     series: funnel.steps.map(toEventsNode),
-    dateRange: { date_from: dateFrom },
+    dateRange: { date_from: range.from, date_to: range.to },
     funnelsFilter: { funnelOrderType: "ordered" },
   };
 
@@ -119,22 +119,30 @@ const SAFE_IDENTIFIER = /^[a-zA-Z0-9_$]+$/;
  * 몇 번 발생했는지". Without this, high-frequency events like $pageview or
  * repeat logins by the same returning user inflate the count far past
  * something like the signup total, which is naturally confusing to compare.
+ *
+ * Pass either `days` (rolling window from now) or `dateFrom`/`dateTo`
+ * (absolute `YYYY-MM-DD`, inclusive) to inspect a specific day or range —
+ * `dateFrom`/`dateTo` take precedence when both are given.
  */
 export async function fetchPropertyBreakdown(
   event: string,
   propertyKey: string,
-  options: { days?: number; limit?: number; uniqueUsers?: boolean } = {},
+  options: { days?: number; dateFrom?: string; dateTo?: string; limit?: number; uniqueUsers?: boolean } = {},
 ): Promise<{ results: PropertyBreakdownRow[] }> {
   if (!SAFE_IDENTIFIER.test(propertyKey)) {
     throw new Error(`Unsafe property key: ${propertyKey}`);
   }
-  const { days = 30, limit = 20, uniqueUsers = false } = options;
+  const { days = 30, dateFrom, dateTo, limit = 20, uniqueUsers = false } = options;
   const countExpr = uniqueUsers ? "count(DISTINCT distinct_id)" : "count()";
+  const dateFilter =
+    dateFrom && dateTo
+      ? "toDate(timestamp) >= toDate({dateFrom}) AND toDate(timestamp) <= toDate({dateTo})"
+      : `timestamp >= now() - INTERVAL ${days} DAY`;
 
   const query = {
     kind: "HogQLQuery",
-    query: `SELECT toString(properties.${propertyKey}) AS value, ${countExpr} AS total FROM events WHERE event = {event} AND timestamp >= now() - INTERVAL ${days} DAY GROUP BY value ORDER BY total DESC LIMIT {limit}`,
-    values: { event, limit },
+    query: `SELECT toString(properties.${propertyKey}) AS value, ${countExpr} AS total FROM events WHERE event = {event} AND ${dateFilter} GROUP BY value ORDER BY total DESC LIMIT {limit}`,
+    values: { event, limit, dateFrom, dateTo },
   };
 
   const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
