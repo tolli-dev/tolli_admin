@@ -1,4 +1,5 @@
 import { fetchAppStoreSummary } from "@/lib/appstore/client";
+import { fetchAppDownloadsTotal, type DownloadsReportStatus } from "@/lib/appstore/analyticsReports";
 import { fetchPlayStoreReviews } from "@/lib/playstore/client";
 import { KpiTile } from "@/components/charts/KpiTile";
 import { ReviewList } from "@/components/store/ReviewList";
@@ -23,6 +24,13 @@ async function AppStoreSection() {
 
   try {
     const summary = await fetchAppStoreSummary();
+    const downloads: DownloadsReportStatus = await fetchAppDownloadsTotal(process.env.APPLE_APP_ID).catch(
+      (error) => ({
+        status: "pending",
+        message: error instanceof Error ? error.message : "다운로드 수를 가져오는 데 실패했어요.",
+      }),
+    );
+
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
         <p className="text-sm text-neutral-400">{summary.appName} (App Store)</p>
@@ -50,9 +58,16 @@ async function AppStoreSection() {
         >
           App Store에서 보기
         </a>
-        <p className="mt-4 text-xs text-neutral-600">
-          다운로드 수는 Apple의 별도 매출/판매 리포트(Finance 권한 필요)로만 받을 수 있어서 아직 연동 안 함.
-        </p>
+        {downloads.status === "ready" ? (
+          <p className="mt-4 text-sm text-neutral-300">
+            총 다운로드 수{" "}
+            <span className="font-semibold text-neutral-50">
+              {downloads.totalDownloads.toLocaleString("ko-KR")}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-4 text-xs text-neutral-600">{downloads.message}</p>
+        )}
       </div>
     );
   } catch (error) {
