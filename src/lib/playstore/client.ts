@@ -9,12 +9,16 @@ function getServiceAccount(): ServiceAccount {
   return JSON.parse(raw) as ServiceAccount;
 }
 
-async function getAccessToken(): Promise<string> {
+export const ANDROID_PUBLISHER_SCOPE = "https://www.googleapis.com/auth/androidpublisher";
+/** Bulk reports live in a Cloud Storage bucket, so they need a Storage scope too. */
+export const DEVSTORAGE_READ_SCOPE = "https://www.googleapis.com/auth/devstorage.read_only";
+
+export async function getAccessToken(scope: string): Promise<string> {
   const { client_email, private_key } = getServiceAccount();
   const key = await importPKCS8(private_key, "RS256");
   const now = Math.floor(Date.now() / 1000);
 
-  const assertion = await new SignJWT({ scope: "https://www.googleapis.com/auth/androidpublisher" })
+  const assertion = await new SignJWT({ scope })
     .setProtectedHeader({ alg: "RS256" })
     .setIssuer(client_email)
     .setSubject(client_email)
@@ -57,17 +61,17 @@ type PlayReviewsResponse = {
 };
 
 /**
- * Google Play has no public API for aggregate install/download counts —
- * that data only exists in the Play Console UI or a linked BigQuery export.
- * Reviews (with star ratings) are available via this endpoint, so an average
- * can be computed over the fetched page, but it's a recent-reviews sample,
- * not the store-wide average shown on the listing page.
+ * This endpoint only returns reviews that have text AND were left in roughly
+ * the last week — ratings-only reviews (the majority) never show up, so its
+ * star ratings are a biased sample, not the store average. Aggregate numbers
+ * (total average rating, installs, star distribution) come from the bulk
+ * reports in `./bulkReports.ts` instead.
  */
 export async function fetchPlayStoreReviews(limit = 20): Promise<PlayReview[]> {
   const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME;
   if (!packageName) throw new Error("GOOGLE_PLAY_PACKAGE_NAME is not set");
 
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(ANDROID_PUBLISHER_SCOPE);
   const response = await fetch(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/reviews?maxResults=${limit}`,
     { headers: { Authorization: `Bearer ${accessToken}` }, next: { revalidate: 3600 } },
