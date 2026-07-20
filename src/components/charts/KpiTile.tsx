@@ -12,10 +12,12 @@ export function KpiTile({
   label,
   value,
   delta,
+  suffix,
 }: {
   label: string;
   value: number;
   delta?: { percent: number; isGood: boolean } | null;
+  suffix?: string;
 }) {
   return (
     <motion.div
@@ -25,7 +27,10 @@ export function KpiTile({
       className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5"
     >
       <p className="text-sm text-neutral-400">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-neutral-50">{formatCompact(value)}</p>
+      <p className="mt-2 text-3xl font-semibold text-neutral-50">
+        {formatCompact(value)}
+        {suffix}
+      </p>
       {delta && (
         <p className={`mt-1 text-xs ${delta.isGood ? "text-[#0ca30c]" : "text-[#d03b3b]"}`}>
           {delta.percent > 0 ? "+" : ""}

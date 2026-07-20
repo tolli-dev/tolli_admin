@@ -1,4 +1,4 @@
-export type DatePreset = "today" | "yesterday" | "7d" | "30d";
+export type DatePreset = "today" | "yesterday" | "7d" | "30d" | "all";
 
 export type ResolvedDateRange = {
   from: string;
@@ -8,6 +8,9 @@ export type ResolvedDateRange = {
 };
 
 const DEFAULT_PRESET: DatePreset = "30d";
+
+// 서비스/앱 오픈일. "전체" 누적 집계의 시작점이다 — 실제 첫 배포일로 바꾸세요.
+export const SERVICE_LAUNCH_DATE = "2025-01-01";
 
 function toISODate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -42,6 +45,8 @@ export function resolveDateRange(searchParams: { preset?: string; date?: string 
     }
     case "7d":
       return { from: toISODate(daysAgo(6)), to: toISODate(new Date()), label: "최근 7일", preset };
+    case "all":
+      return { from: SERVICE_LAUNCH_DATE, to: toISODate(new Date()), label: "전체", preset: "all" };
     case "30d":
     default:
       return { from: toISODate(daysAgo(29)), to: toISODate(new Date()), label: "최근 30일", preset: "30d" };

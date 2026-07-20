@@ -6,6 +6,7 @@ const PRESETS: { key: DatePreset; label: string }[] = [
   { key: "yesterday", label: "어제" },
   { key: "7d", label: "최근 7일" },
   { key: "30d", label: "최근 30일" },
+  { key: "all", label: "전체" },
 ];
 
 export function DateRangePicker({

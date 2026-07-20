@@ -60,11 +60,19 @@ export default async function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TrendLine title="일별 방문자 수 (최근 30일)" days={dau?.days ?? []} values={dau?.data ?? []} />
+        <TrendLine
+          title="일별 방문자 수 (최근 30일)"
+          days={dau?.days ?? []}
+          values={dau?.data ?? []}
+          valueLabel="방문자"
+          unit="명"
+        />
         <TrendLine
           title="일별 신규 가입 수 (최근 30일)"
           days={signups30dTrend.results[0]?.days ?? []}
           values={signups30dTrend.results[0]?.data ?? []}
+          valueLabel="신규 가입"
+          unit="명"
         />
       </div>
 

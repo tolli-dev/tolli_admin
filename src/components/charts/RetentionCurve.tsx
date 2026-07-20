@@ -2,23 +2,20 @@
 
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 
-export function TrendLine({
+/**
+ * 가입 후 0~N구간 재방문율을 곡선으로 그린다. `rates[i]`는 i구간의 퍼센트 값이고
+ * 0구간은 정의상 100%에서 시작한다. `prefix`로 축 라벨을 D(일)/W(주) 등으로 바꾼다.
+ */
+export function RetentionCurve({
   title,
-  days,
-  values,
-  valueLabel = "값",
-  unit = "",
+  rates,
+  prefix = "D",
 }: {
   title: string;
-  days: string[];
-  values: number[];
-  valueLabel?: string;
-  unit?: string;
+  rates: number[];
+  prefix?: string;
 }) {
-  // x축 키는 자르지 않은 전체 날짜(YYYY-MM-DD)를 쓴다. "전체" 범위처럼 여러 해에
-  // 걸치면 "MM-DD"로 자른 값이 중복돼 recharts가 hover 지점을 못 잡고 툴팁이
-  // 안 뜨기 때문. 축에 보이는 라벨만 tickFormatter로 MM-DD로 줄인다.
-  const data = days.map((day, index) => ({ day, value: values[index] ?? 0 }));
+  const data = rates.map((rate, index) => ({ day: `${prefix}${index}`, value: Number(rate.toFixed(1)) }));
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
@@ -27,29 +24,28 @@ export function TrendLine({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid stroke="#2c2c2a" strokeDasharray="0" vertical={false} />
-            <XAxis
-              dataKey="day"
+            <XAxis dataKey="day" stroke="#898781" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis
               stroke="#898781"
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value: string) => (typeof value === "string" ? value.slice(5) : value)}
-              minTickGap={24}
-              interval="preserveStartEnd"
+              width={44}
+              unit="%"
+              domain={[0, 100]}
             />
-            <YAxis stroke="#898781" fontSize={12} tickLine={false} axisLine={false} width={40} />
             <Tooltip
               contentStyle={{ background: "#1a1a19", border: "1px solid #2c2c2a", borderRadius: 8 }}
               labelStyle={{ color: "#c3c2b7" }}
               itemStyle={{ color: "#ffffff" }}
-              formatter={(value) => [`${Number(value).toLocaleString("ko-KR")}${unit}`, valueLabel] as [string, string]}
+              formatter={(value) => [`${value}%`, "재방문율"] as [string, string]}
             />
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#3987e5"
+              stroke="#199e70"
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 3, fill: "#199e70" }}
               activeDot={{ r: 4, stroke: "#1a1a19", strokeWidth: 2 }}
             />
           </LineChart>
