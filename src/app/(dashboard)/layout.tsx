@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/overview", label: "개요" },
   { href: "/retention", label: "재방문 · 리텐션" },
   ...FUNNELS.map((funnel) => ({ href: `/funnels/${funnel.id}`, label: funnel.title })),
+  { href: "/experiments", label: "A/B 테스트" },
   { href: "/store", label: "스토어 현황" },
   { href: "/events", label: "이벤트 탐색기" },
 ];

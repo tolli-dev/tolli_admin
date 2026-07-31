@@ -283,6 +283,91 @@ function computeRetentionRate(
   };
 }
 
+export type VariantMetrics = {
+  variant: string;
+  exposed: number;
+  started: number;
+  completed: number;
+  abandoned: number;
+};
+
+export async function fetchExperimentMetrics(
+  experimentKey: string,
+  range: { from: string; to: string },
+): Promise<VariantMetrics[]> {
+  if (!SAFE_IDENTIFIER.test(experimentKey)) {
+    throw new Error(`Unsafe experiment key: ${experimentKey}`);
+  }
+
+  const query = {
+    kind: "HogQLQuery",
+    query: `
+      SELECT
+        toString(properties.${experimentKey}) AS variant,
+        count(DISTINCT if(event = 'experiment_exposed', distinct_id, NULL)) AS exposed,
+        count(DISTINCT if(event = 'study_started', distinct_id, NULL)) AS started,
+        count(DISTINCT if(event = 'study_completed', distinct_id, NULL)) AS completed,
+        count(DISTINCT if(event = 'study_abandoned', distinct_id, NULL)) AS abandoned
+      FROM events
+      WHERE toDate(timestamp) >= toDate({dateFrom})
+        AND toDate(timestamp) <= toDate({dateTo})
+        AND variant IN ('A', 'B')
+      GROUP BY variant
+      ORDER BY variant
+    `,
+    values: { dateFrom: range.from, dateTo: range.to },
+  };
+
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  return response.results.map((row) => ({
+    variant: String(row[0]),
+    exposed: Number(row[1]),
+    started: Number(row[2]),
+    completed: Number(row[3]),
+    abandoned: Number(row[4]),
+  }));
+}
+
+export type VariantStepDropoff = {
+  variant: string;
+  step: number;
+  count: number;
+};
+
+export async function fetchExperimentStepDropoff(
+  experimentKey: string,
+  range: { from: string; to: string },
+): Promise<VariantStepDropoff[]> {
+  if (!SAFE_IDENTIFIER.test(experimentKey)) {
+    throw new Error(`Unsafe experiment key: ${experimentKey}`);
+  }
+
+  const query = {
+    kind: "HogQLQuery",
+    query: `
+      SELECT
+        toString(properties.${experimentKey}) AS variant,
+        toInt(properties.abandoned_at_step) AS step,
+        count(DISTINCT distinct_id) AS total
+      FROM events
+      WHERE event = 'study_abandoned'
+        AND toDate(timestamp) >= toDate({dateFrom})
+        AND toDate(timestamp) <= toDate({dateTo})
+        AND variant IN ('A', 'B')
+      GROUP BY variant, step
+      ORDER BY variant, step
+    `,
+    values: { dateFrom: range.from, dateTo: range.to },
+  };
+
+  const response = await runPostHogQuery<HogQLQueryResponse>(query, 300);
+  return response.results.map((row) => ({
+    variant: String(row[0]),
+    step: Number(row[1]),
+    count: Number(row[2]),
+  }));
+}
+
 /**
  * 지정한 롤링 기간(일) 동안 활동한 고유 유저 수. DAU=1, WAU=7, MAU=30으로 호출해
  * 활성도·Stickiness(DAU÷MAU)를 계산한다.

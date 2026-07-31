@@ -9,15 +9,19 @@ const PRESETS: { key: DatePreset; label: string }[] = [
   { key: "all", label: "전체" },
 ];
 
-export function DateRangePicker({
-  funnelId,
-  activePreset,
-  customDate,
-}: {
-  funnelId: string;
+type DateRangePickerProps = {
   activePreset: DatePreset | null;
   customDate?: string;
-}) {
+} & ({ funnelId: string; basePath?: never } | { basePath: string; funnelId?: never });
+
+export function DateRangePicker({
+  funnelId,
+  basePath,
+  activePreset,
+  customDate,
+}: DateRangePickerProps) {
+  const targetPath = basePath ?? `/funnels/${funnelId}`;
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {PRESETS.map((preset) => {
@@ -25,7 +29,7 @@ export function DateRangePicker({
         return (
           <Link
             key={preset.key}
-            href={`/funnels/${funnelId}?preset=${preset.key}`}
+            href={`${targetPath}?preset=${preset.key}`}
             className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
               isActive
                 ? "bg-blue-500/20 text-blue-300"
@@ -36,7 +40,7 @@ export function DateRangePicker({
           </Link>
         );
       })}
-      <form action={`/funnels/${funnelId}`} method="get" className="flex items-center gap-2">
+      <form action={targetPath} method="get" className="flex items-center gap-2">
         <input
           type="date"
           name="date"
