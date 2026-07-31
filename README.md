@@ -18,6 +18,8 @@ tolli_FE의 PostHog 이벤트를 시각화하고 퍼널 분석·스토어 현황
    - `GOOGLE_PLAY_PACKAGE_NAME` — Google Play 앱 패키지명 (리뷰 조회용)
    - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` — Play Console에서 발급한 서비스 계정 JSON (한 줄 문자열)
    - `GOOGLE_PLAY_REPORTS_BUCKET` — Google Play 전체 평점/설치 수/별점 분포용. Play Console → 다운로드 리포트에 표시된 `gs://pubsite_prod_...` 버킷 이름. 이 값을 쓰려면 서비스 계정에 **계정 권한**(앱 권한이 아니라 사용자 및 권한 → 계정 권한 탭)의 "앱 정보 보기 및 보고서 일괄 다운로드(읽기 전용)"를 부여해야 한다. 없으면 스토어 페이지의 Google Play 통계가 403으로 비어 보인다.
+   - `INSTAGRAM_ACCESS_TOKEN` — 인스타그램 프로필/인사이트/게시물 조회용 장기 액세스 토큰. 톨리 인스타 계정이 **프로페셔널(비즈니스·크리에이터)** 계정이어야 하고(개인 계정은 2024년 12월 Basic Display API 종료로 조회 불가), developers.facebook.com → 앱 → Instagram → "API setup with Instagram login"에서 `instagram_business_basic`, `instagram_business_manage_insights` 권한으로 발급한다. 장기 토큰 유효기간은 60일이라 만료 전에 갱신해야 한다.
+   - `INSTAGRAM_GRAPH_HOST`, `INSTAGRAM_USER_ID` — 페이스북 페이지에 연결된 계정(Facebook Login 방식)일 때만 각각 `graph.facebook.com`과 IG 유저 ID를 넣는다. Instagram Login 방식이면 둘 다 비워두면 된다.
    - `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `APPLE_API_PRIVATE_KEY` — App Store 다운로드 수 조회용. App Store Connect → Users and Access → Integrations → App Store Connect API에서 **Account Holder**가 발급 (최초 리포트 요청에 Admin 권한이 필요해서). 발급 시 받는 .p8 키 내용을 `APPLE_API_PRIVATE_KEY`에 `\n`으로 개행을 escape해서 한 줄로 넣는다.
 3. `pnpm dev` 실행 후 http://localhost:3000 접속
 
@@ -32,9 +34,10 @@ tolli_FE의 PostHog 이벤트를 시각화하고 퍼널 분석·스토어 현황
 - `src/lib/appstore/analyticsReports.ts` — App Store 다운로드 수 (Analytics Reports API, ES256 JWT 인증)
 - `src/lib/playstore/client.ts` — Google Play 리뷰 (서비스 계정 JWT 인증). Play Developer API는 **최근 1주일 + 글이 달린 리뷰만** 주므로 여기서 나온 평균은 스토어 평균이 아니다.
 - `src/lib/playstore/bulkReports.ts` — Google Play 전체 평점/설치 수/별점 분포. Play Console이 Cloud Storage 버킷에 올려주는 월별 CSV 리포트를 읽는다 (CSV 인코딩이 UTF-16LE인 점 주의)
+- `src/lib/instagram/client.ts` — 인스타그램 프로필·인사이트·최근 게시물 (Instagram Platform API). 인사이트는 한 요청당 최대 30일 구간이라 28일씩 받는다. 도달/조회수는 팔로워 수 제한이 없지만(100명 제한은 `follower_count`·`audience_*` 계열), 권한 문제로 통째로 막힐 수 있어 실패해도 페이지 나머지는 살려둔다.
 - `src/components/funnel/FunnelChart.tsx` — ECharts 트라페조이드 퍼널 차트
 - `src/components/charts/BreakdownBar.tsx` — 속성별 분포(로그인 방법, 기기, 이탈 지점 등) 바 차트
-- `src/app/(dashboard)/` — 로그인 후 대시보드 페이지 (개요, 퍼널 3종, 스토어 현황, 이벤트 탐색기)
+- `src/app/(dashboard)/` — 로그인 후 대시보드 페이지 (개요, 퍼널 3종, 스토어 현황, 인스타그램, 이벤트 탐색기)
 
 ## 테스트
 
