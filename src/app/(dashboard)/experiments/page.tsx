@@ -127,12 +127,15 @@ function buildDropoffSeries(
   };
 }
 
+const MIN_SAMPLE_FOR_BALANCE_CHECK = 30;
+
 function BalanceNotice({ control, treatment }: { control: number; treatment: number }) {
   const total = control + treatment;
   if (total === 0) return null;
 
   const controlShare = (control / total) * 100;
-  const isSkewed = Math.abs(controlShare - 50) > 10;
+  const isTooSmallToJudge = total < MIN_SAMPLE_FOR_BALANCE_CHECK;
+  const isSkewed = !isTooSmallToJudge && Math.abs(controlShare - 50) > 10;
 
   return (
     <div
@@ -142,10 +145,13 @@ function BalanceNotice({ control, treatment }: { control: number; treatment: num
           : "border-neutral-800 bg-neutral-900/60 text-neutral-400"
       }`}
     >
-      그룹 배분 A {controlShare.toFixed(1)}% · B {(100 - controlShare).toFixed(1)}%
-      {isSkewed
-        ? " — 한쪽으로 10%p 넘게 기울었어요. uid 배정이나 이벤트 수집을 확인해 주세요."
-        : " — 정상 범위예요."}
+      그룹 배분 A {controlShare.toFixed(1)}% · B {(100 - controlShare).toFixed(1)}% (총{" "}
+      {total.toLocaleString("ko-KR")}명)
+      {isTooSmallToJudge
+        ? ` — 아직 실험 대상이 ${MIN_SAMPLE_FOR_BALANCE_CHECK}명이 안 돼서 배분이 고른지 판단할 수 없어요. 표본이 적을 땐 한쪽으로 쏠려 보이는 게 정상이에요.`
+        : isSkewed
+          ? " — 한쪽으로 10%p 넘게 기울었어요. uid 배정이나 이벤트 수집을 확인해 주세요."
+          : " — 정상 범위예요."}
     </div>
   );
 }
@@ -155,8 +161,8 @@ function EmptyState({ label }: { label: string }) {
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-10 text-center">
       <p className="text-sm text-neutral-400">{label} 기간에는 아직 실험 데이터가 없어요.</p>
       <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-        실험은 {EXPERIMENT_START_DATE}부터 가입한 신규 유저에게만 적용돼요. 앱에서 학습을 시작하면{" "}
-        <code className="rounded bg-neutral-800 px-1 py-0.5 text-neutral-300">experiment_exposed</code> 이벤트가
+        실험은 {EXPERIMENT_START_DATE}부터 가입한 신규 유저에게만 적용돼요. 그 이전에 가입한 기존 유저는 학습 플로우가
+        도중에 바뀌지 않도록 실험에서 제외되고, 이 화면에도 집계되지 않아요. 신규 가입자가 학습을 시작하면 숫자가
         쌓이기 시작해요.
       </p>
     </div>

@@ -312,6 +312,7 @@ export async function fetchExperimentMetrics(
       WHERE toDate(timestamp) >= toDate({dateFrom})
         AND toDate(timestamp) <= toDate({dateTo})
         AND variant IN ('A', 'B')
+        AND toString(properties.experiment_enrolled) = 'true'
       GROUP BY variant
       ORDER BY variant
     `,
@@ -354,6 +355,7 @@ export async function fetchExperimentStepDropoff(
         AND toDate(timestamp) >= toDate({dateFrom})
         AND toDate(timestamp) <= toDate({dateTo})
         AND variant IN ('A', 'B')
+        AND toString(properties.experiment_enrolled) = 'true'
       GROUP BY variant, step
       ORDER BY variant, step
     `,
