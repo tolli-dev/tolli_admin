@@ -1,4 +1,4 @@
-import { fetchTopLearners } from "@/lib/posthog/queries";
+import { fetchTopLearners } from "@/lib/learners/queries";
 import { RefreshButton } from "@/components/ui/refresh-button";
 
 export const revalidate = 300;
@@ -49,15 +49,14 @@ export default async function LearnersPage() {
                 const rank = index + 1;
                 return (
                   <tr
-                    key={learner.distinctId}
+                    key={learner.userId}
                     className="border-b border-neutral-800/60 transition-colors last:border-0 hover:bg-neutral-800/40"
                   >
                     <td className="px-5 py-3 tabular-nums text-neutral-400">
                       {RANK_MEDALS[rank] ?? rank}
                     </td>
                     <td className="px-5 py-3">
-                      <span className="text-neutral-100">{learner.nickname ?? "(닉네임 없음)"}</span>
-                      <span className="ml-2 font-mono text-xs text-neutral-600">{learner.distinctId}</span>
+                      <span className="text-neutral-100">{learner.nickname}</span>
                     </td>
                     <td className="px-5 py-3 text-right tabular-nums font-semibold text-neutral-50">
                       {learner.completions.toLocaleString("ko-KR")}
@@ -77,9 +76,9 @@ export default async function LearnersPage() {
       )}
 
       <p className="text-xs leading-relaxed text-neutral-500">
-        완주 횟수는 학습을 끝까지 마친(study_completed) 총 횟수이고, 말씀 수는 서로 다른 말씀의 개수예요. 같은 말씀을
-        복습으로 다시 완주하면 완주 횟수만 늘어서 두 값이 달라질 수 있어요. 닉네임은 보관함 화면을 거친 사람만
-        수집돼서 일부는 비어 있어요.
+        학습 완주 기록(study_completions)을 직접 센 값이라 분석 이벤트 유실 없이 정확해요. 완주 횟수는 총 완주 건수,
+        말씀 수는 서로 다른 말씀의 개수예요. 지금은 이미 완주한 말씀을 다시 학습해도 기록이 쌓이지 않아 두 값이
+        같아요.
       </p>
     </div>
   );
